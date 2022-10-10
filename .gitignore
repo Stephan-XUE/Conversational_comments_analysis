@@ -1,3 +1,6 @@
 .vscode
+embedding
+__pycache__
 *test.*
 praw.ini
+guided_research_latex

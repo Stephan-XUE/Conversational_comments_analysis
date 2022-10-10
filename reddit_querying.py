@@ -24,7 +24,7 @@ class RedditQuery:
         self.target = list()
         
     def querying_comments_with_praw(self):
-        ### Querying comments with specific target words
+        ### Querying comments with specific target words with pushshift API
         comments_list = list(self.api.search_comments(q=self.query, 
                                         after=self.start_epoch, before=self.end_epoch,
                                         # subreddit='politics',
@@ -32,16 +32,19 @@ class RedditQuery:
 
         submission_list = list()
 
+        ### return a list of submission ids with searched comments
         for comment in comments_list:
             if not comment.link_id == [subm for subm in submission_list]:
                 submission_list.append(comment.link_id)  ### submission id with 't3_' prefix
 
+        ### Collect submission and the following comments meta-data list with PRAW API
         for count, submission in enumerate(reddit.info(fullnames=submission_list)):
             ### Skip redundant submissions
             for subm in self.target:
                 if subm['id'] == submission.id:
                     continue
             
+            ### Level submission
             subm = dict()
             subm['id'] = submission.id
             subm['title'] = submission.title
@@ -56,7 +59,8 @@ class RedditQuery:
                 submission.comments.replace_more(limit=1)
             except excep.DuplicateReplaceException:
                 print('Exception occured, comments are updated!')
-                
+            
+            ### Level comments
             comm_list = list()
             for comment in submission.comments.list():
                 comment.refresh()
@@ -77,18 +81,22 @@ class RedditQuery:
             subm['comments'] = comm_list
             self.target.append(subm)
             print('The ' + str(count+1) + ' submission has been successfully downloaded!')
+            
+            ### save json file very 1000 submissions
             if (count+1)%1000 == 0:
                 self.save_json_file()
+        ### save the final json file
         self.save_json_file()
 
     def querying_submissions_with_praw(self):
-        ### Querying submission id with specific target words
+        ### Querying submission id with specific target words with pushshift API
         submission_list = [f't3_{id}' for id in self.api.search_submissions(q=self.query, 
                                                                     after=self.start_epoch, before=self.end_epoch,
                                                                     limit=self.limit)]
 
+        ### Collect submission and the following comments meta-data list with PRAW API
         for count, submission in enumerate(reddit.info(fullnames=submission_list)):
-            
+            ### Level submission
             subm = dict()
             subm['id'] = submission.id
             subm['title'] = submission.title
@@ -104,6 +112,7 @@ class RedditQuery:
             except excep.DuplicateReplaceException:
                 print('Exception occured due to comments updated!')
                 
+            ### Level comments
             comm_list = list()
             for comment in submission.comments.list():
                 try:
@@ -127,8 +136,11 @@ class RedditQuery:
             subm['comments'] = comm_list
             self.target.append(subm)
             print('The ' + str(count+1) + ' submission has been successfully downloaded!')
+            
+            ### save json file very 1000 submissions
             if (count+1)%1000 == 0:
                 self.save_json_file()
+        ### save the final json file
         self.save_json_file()  
 
     def save_json_file(self):
@@ -140,11 +152,12 @@ start_epoch = int(dt.datetime(2017, 1, 1).timestamp())
 end_epoch = int(dt.datetime(2022, 7, 20).timestamp())
 ### query for social robot
 # query = '"chatbot" | | "virtual assistant" 
-query = '"service bot" | "conversational modelling" | "conversational system" | "conversation system" | "conversational entities" | "conversational agents" | "virtual agent" | "intelligent agent"' # Use quotation in string to do exact search, use | do or search
+# query = '"service bot" | "conversational modelling" | "conversational system" | "conversation system" | "conversational entities" | "conversational agents" | "virtual agent" | "intelligent agent"' # Use quotation in string to do exact search, use | do or search
 ### query for vegan food
-# query = '"vegan" | "veganism" | "vegetarian"'
+query = '"vegan" | "veganism" | "vegetarian"'
 
 
 # querying_comments_with_praw(query, start_epoch, end_epoch)
-search = RedditQuery(query, start_epoch, end_epoch, limit=5000)
+search = RedditQuery(query, start_epoch, end_epoch, limit=10000)
 search.querying_submissions_with_praw()
+# search.querying_comments_with_praw()
